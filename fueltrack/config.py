@@ -32,6 +32,7 @@ class GhostConfig(BaseModel):
     admin_api_key: str = ""
     page_slug: str = "uk-fuel-prices"
     page_id: str = ""
+    host: str = ""
 
 
 class Settings(BaseModel):

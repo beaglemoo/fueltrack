@@ -40,9 +40,8 @@ def _esc(text: str) -> str:
     return html.escape(text, quote=True)
 
 
-_PAGE_CSS = """
-<style>
-.ft-search-wrap{margin:0 0 1.5em;position:sticky;top:0;z-index:10;background:var(--ghost-accent-color,#1a1a2e);padding:1em;border-radius:8px}
+_PAGE_CSS = """<style>
+.ft-search-wrap{margin:0 0 1.5em;position:sticky;top:0;z-index:10;background:#1a1a2e;padding:1em;border-radius:8px}
 .ft-search{width:100%;padding:12px 16px;font-size:1.1em;border:2px solid rgba(255,255,255,0.2);border-radius:6px;background:rgba(255,255,255,0.1);color:#fff;outline:none;box-sizing:border-box}
 .ft-search::placeholder{color:rgba(255,255,255,0.5)}
 .ft-search:focus{border-color:rgba(255,255,255,0.5)}
@@ -50,7 +49,6 @@ _PAGE_CSS = """
 .ft-sort{display:flex;gap:4px;flex-wrap:wrap}
 .ft-sort button{background:rgba(255,255,255,0.15);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.85em}
 .ft-sort button.active{background:rgba(255,255,255,0.35)}
-.ft-results{margin:1em 0}
 .ft-results table{width:100%;border-collapse:collapse;font-size:0.9em}
 .ft-results th{text-align:left;padding:8px 6px;border-bottom:2px solid rgba(255,255,255,0.2);font-size:0.8em;text-transform:uppercase;letter-spacing:0.05em}
 .ft-results td{padding:6px;border-bottom:1px solid rgba(255,255,255,0.07)}
@@ -65,19 +63,54 @@ _PAGE_CSS = """
 .ft-results .hide-mobile{display:none}
 .ft-results td,.ft-results th{padding:4px 3px;font-size:0.8em}
 }
-</style>
-"""
+</style>"""
 
-_PAGE_JS = """
-<script>
+_PAGE_JS = """<script>
 (function(){
-var S=window._FT_DATA||[];
+var hook=document.getElementById('search-all-stations');
+if(!hook)return;
+
+// Create container div after the heading
+var app=document.createElement('div');
+app.id='ft-app';
+hook.parentNode.insertBefore(app,hook.nextSibling);
+
+// Load station data from static JSON file
+app.innerHTML='<div class="ft-prompt">Loading station data...</div>';
+fetch('/content/files/stations.json')
+.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+.then(function(S){initApp(S);})
+.catch(function(e){app.innerHTML='<div class="ft-prompt">Failed to load station data. Please try refreshing.</div>';});
+
+function initApp(S){
+if(!S.length)return;
+hook=app;
+
+hook.innerHTML='<div class="ft-search-wrap">'
++'<input type="text" id="ft-search" class="ft-search" placeholder="Search by station name, brand, or location..." autocomplete="off">'
++'<div class="ft-meta"><span id="ft-count"></span>'
++'<div class="ft-sort">Sort: '
++'<button data-col="e" class="active">Unleaded</button>'
++'<button data-col="d">Diesel</button>'
++'<button data-col="s">Super</button>'
++'<button data-col="n">Name</button>'
++'</div></div></div>'
++'<div class="ft-results">'
++'<div id="ft-prompt" class="ft-prompt">Type a location, station name, or brand to search all UK fuel prices</div>'
++'<table><thead><tr>'
++'<th>Station</th><th>Brand</th>'
++'<th>Unleaded</th><th class="hide-mobile">Super</th>'
++'<th>Diesel</th><th class="hide-mobile">Premium</th>'
++'</tr></thead><tbody id="ft-body"></tbody></table>'
++'<button id="ft-more" class="ft-more" style="display:none">Show more</button>'
++'</div>';
+
 var input=document.getElementById('ft-search');
 var tbody=document.getElementById('ft-body');
 var countEl=document.getElementById('ft-count');
 var moreBtn=document.getElementById('ft-more');
 var promptEl=document.getElementById('ft-prompt');
-var sortBtns=document.querySelectorAll('.ft-sort button');
+var sortBtns=hook.querySelectorAll('.ft-sort button');
 var filtered=[];
 var limit=100;
 var sortCol='e';
@@ -95,28 +128,26 @@ function render(){
     var tr=document.createElement('tr');
     var c=function(t,cls){var td=document.createElement('td');td.textContent=t;if(cls)td.className=cls;return td;};
     var nameCell=document.createElement('td');
-    var nameText=document.createTextNode(s.n);
-    nameCell.appendChild(nameText);
+    nameCell.appendChild(document.createTextNode(s.n));
     if(s.l&&s.l!==s.n){var loc=document.createElement('span');loc.className='ft-loc';loc.textContent=s.l;nameCell.appendChild(loc);}
     tr.appendChild(nameCell);
     tr.appendChild(c(s.b,''));
     tr.appendChild(c(fmt(s.e),'price'+(s._ce?' cheap':'')));
-    tr.appendChild(c(fmt(s.s),'price hide-mobile'));
+    var superCell=c(fmt(s.s),'price hide-mobile');tr.appendChild(superCell);
     tr.appendChild(c(fmt(s.d),'price'+(s._cd?' cheap':'')));
-    tr.appendChild(c(fmt(s.p),'price hide-mobile'));
+    var premCell=c(fmt(s.p),'price hide-mobile');tr.appendChild(premCell);
     frag.appendChild(tr);
   }
   tbody.appendChild(frag);
   countEl.textContent=filtered.length===S.length?filtered.length.toLocaleString()+' stations':filtered.length.toLocaleString()+' matches';
   moreBtn.style.display=filtered.length>limit?'block':'none';
   if(filtered.length>limit)moreBtn.textContent='Show more ('+Math.min(100,filtered.length-limit)+' of '+(filtered.length-limit)+' remaining)';
-  promptEl.style.display=filtered.length===0&&input.value.length===0?'block':'none';
+  promptEl.style.display=(filtered.length===0&&input.value.length===0)?'block':'none';
 }
 
 function doSort(){
-  var col=sortCol;
   filtered.sort(function(a,b){
-    var va=a[col],vb=b[col];
+    var va=a[sortCol],vb=b[sortCol];
     if(va==null&&vb==null)return 0;
     if(va==null)return 1;
     if(vb==null)return-1;
@@ -141,55 +172,45 @@ function markCheapest(){
 function filter(){
   var q=input.value.toLowerCase().trim();
   limit=100;
-  if(q===''){
-    filtered=S.slice();
-  }else{
+  if(q===''){filtered=S.slice();}
+  else{
     var terms=q.split(/\\s+/);
     filtered=S.filter(function(s){
       var hay=(s.n+'|'+s.b+'|'+(s.l||'')).toLowerCase();
       return terms.every(function(t){return hay.indexOf(t)>=0;});
     });
   }
-  doSort();
-  markCheapest();
-  render();
+  doSort();markCheapest();render();
 }
 
-input.addEventListener('input',function(){
-  clearTimeout(timer);
-  timer=setTimeout(filter,200);
-});
-
-moreBtn.addEventListener('click',function(){
-  limit+=100;
-  render();
-});
-
+input.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(filter,200);});
+moreBtn.addEventListener('click',function(){limit+=100;render();});
 sortBtns.forEach(function(btn){
   btn.addEventListener('click',function(){
     var col=this.getAttribute('data-col');
     if(sortCol===col){sortAsc=!sortAsc;}else{sortCol=col;sortAsc=col==='n'||col==='b';}
     sortBtns.forEach(function(b){b.classList.remove('active');});
     this.classList.add('active');
-    doSort();
-    render();
+    doSort();render();
   });
 });
 
-// Initial render - show prompt
 promptEl.style.display='block';
 countEl.textContent=S.length.toLocaleString()+' stations';
+}
 })();
-</script>
-"""
+</script>"""
 
 
-def generate_html(
+def generate_page_data(
     stations: list[Station],
     regions: list[RegionConfig],
     fuel_types: list[str],
-) -> str:
-    """Generate HTML content for the Ghost fuel prices page."""
+) -> dict:
+    """Generate HTML content, CSS, and JS for the Ghost fuel prices page.
+
+    Returns dict with keys: html, codeinjection_head, codeinjection_foot
+    """
     now = datetime.now(timezone.utc).strftime("%d %B %Y at %H:%M UTC")
 
     # Build station data with classification
@@ -234,11 +255,8 @@ def generate_html(
             "p": row["prices"].get("B7_PREMIUM"),
         })
 
-    # Build HTML
+    # Build HTML (only Ghost-safe elements - no script/style/input/button)
     parts = []
-
-    # CSS
-    parts.append(_PAGE_CSS)
 
     # Header
     parts.append(f'<p><strong>Last updated:</strong> {now}</p>')
@@ -247,78 +265,8 @@ def generate_html(
                  'Prices update within 30 minutes of changes at the pump. '
                  'This page refreshes every 4 hours.</p>')
 
-    # Search UI
-    parts.append('<div class="ft-search-wrap">')
-    parts.append('<input type="text" id="ft-search" class="ft-search" '
-                 'placeholder="Search by station name, brand, or location..." autocomplete="off">')
-    parts.append('<div class="ft-meta">')
-    parts.append('<span id="ft-count"></span>')
-    parts.append('<div class="ft-sort">Sort: '
-                 '<button data-col="e" class="active">Unleaded</button>'
-                 '<button data-col="d">Diesel</button>'
-                 '<button data-col="s">Super</button>'
-                 '<button data-col="n">Name</button>'
-                 '</div>')
-    parts.append('</div>')
-    parts.append('</div>')
-
-    # Results area
-    parts.append('<div class="ft-results">')
-    parts.append('<div id="ft-prompt" class="ft-prompt">Type a location, station name, or brand to search all UK fuel prices</div>')
-    parts.append('<table>')
-    parts.append('<thead><tr>'
-                 '<th>Station</th><th>Brand</th>'
-                 '<th>Unleaded</th><th class="hide-mobile">Super</th>'
-                 '<th>Diesel</th><th class="hide-mobile">Premium</th>'
-                 '</tr></thead>')
-    parts.append('<tbody id="ft-body"></tbody>')
-    parts.append('</table>')
-    parts.append('<button id="ft-more" class="ft-more" style="display:none">Show more</button>')
-    parts.append('</div>')
-
-    parts.append('<hr>')
-
-    # Regional summaries (static HTML)
-    for region in regions:
-        region_stations = [s for s in station_rows if s["region"] == region.name]
-        if not region_stations:
-            continue
-
-        parts.append(f'<h2>{_esc(region.label)}</h2>')
-
-        for ft in ["E10", "E5", "B7_STANDARD", "B7_PREMIUM"]:
-            ft_label = {"E10": "Unleaded (E10)", "E5": "Super Unleaded (E5)",
-                        "B7_STANDARD": "Diesel", "B7_PREMIUM": "Premium Diesel"}.get(ft, ft)
-            stations_with_ft = [(s, s["prices"][ft]) for s in region_stations if ft in s["prices"]]
-            if not stations_with_ft:
-                continue
-            stations_with_ft.sort(key=lambda x: x[1])
-            cheapest = stations_with_ft[0]
-            parts.append(
-                f'<p><strong>Cheapest {ft_label}:</strong> {cheapest[1]:.1f}p - {_esc(cheapest[0]["name"])}</p>'
-            )
-
-        parts.append('<table>')
-        parts.append('<thead><tr>'
-                     '<th>Station</th><th>Brand</th>'
-                     '<th>Unleaded</th><th>Super</th>'
-                     '<th>Diesel</th><th>Premium</th>'
-                     '</tr></thead>')
-        parts.append('<tbody>')
-
-        for s in region_stations:
-            parts.append(
-                f'<tr>'
-                f'<td>{_esc(s["name"])}</td>'
-                f'<td>{_esc(s["brand"])}</td>'
-                f'<td>{_format_price(s["prices"].get("E10"))}</td>'
-                f'<td>{_format_price(s["prices"].get("E5"))}</td>'
-                f'<td>{_format_price(s["prices"].get("B7_STANDARD"))}</td>'
-                f'<td>{_format_price(s["prices"].get("B7_PREMIUM"))}</td>'
-                f'</tr>'
-            )
-
-        parts.append('</tbody></table>')
+    # Use a heading as anchor - Ghost preserves h2 with auto-generated IDs
+    parts.append('<h2 id="search">Search All Stations</h2>')
 
     # National top 20 cheapest
     parts.append('<hr>')
@@ -348,11 +296,49 @@ def generate_html(
                  '| Data: GOV.UK Fuel Finder (Open Government Licence v3.0) '
                  '| Updates every 4 hours</small></p>')
 
-    # Embed JSON data and JS at the end
-    parts.append(f'<script>window._FT_DATA={json.dumps(json_data, separators=(",",":"))};</script>')
-    parts.append(_PAGE_JS)
+    return {
+        "html": "\n".join(parts),
+        "codeinjection_head": _PAGE_CSS,
+        "codeinjection_foot": _PAGE_JS,
+        "station_json": json.dumps(json_data, separators=(",", ":")),
+    }
 
-    return "\n".join(parts)
+
+# Keep backward-compatible function name
+def generate_html(
+    stations: list[Station],
+    regions: list[RegionConfig],
+    fuel_types: list[str],
+) -> str:
+    """Generate HTML content for the Ghost fuel prices page."""
+    return generate_page_data(stations, regions, fuel_types)["html"]
+
+
+def upload_station_data(ghost_host: str, json_str: str):
+    """Upload station JSON data to Ghost's static files directory via SSH."""
+    import subprocess
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=True) as f:
+        f.write(json_str)
+        f.flush()
+        result = subprocess.run(
+            [
+                "scp", "-o", "StrictHostKeyChecking=no",
+                f.name, f"root@{ghost_host}:/var/www/ghost/content/files/stations.json",
+            ],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"SCP failed: {result.stderr}")
+
+    # Fix ownership
+    subprocess.run(
+        ["ssh", "-o", "StrictHostKeyChecking=no", f"root@{ghost_host}",
+         "chown ghost:ghost /var/www/ghost/content/files/stations.json"],
+        capture_output=True, text=True, timeout=10,
+    )
+    logger.info("Uploaded station data to Ghost (%d bytes)", len(json_str))
 
 
 async def update_ghost_page(
@@ -361,6 +347,8 @@ async def update_ghost_page(
     page_slug: str,
     html_content: str,
     page_id: str = "",
+    codeinjection_head: str = "",
+    codeinjection_foot: str = "",
 ):
     """Update a Ghost page with fuel price data."""
     token = _build_token(admin_api_key)
@@ -383,14 +371,20 @@ async def update_ghost_page(
         pid = page["id"]
         updated_at = page["updated_at"]
 
+        page_data = {
+            "html": html_content,
+            "updated_at": updated_at,
+        }
+        if codeinjection_head:
+            page_data["codeinjection_head"] = codeinjection_head
+        if codeinjection_foot:
+            page_data["codeinjection_foot"] = codeinjection_foot
+
         resp = await client.put(
             f"{ghost_url}/ghost/api/admin/pages/{pid}/?source=html",
             headers=headers,
             json={
-                "pages": [{
-                    "html": html_content,
-                    "updated_at": updated_at,
-                }]
+                "pages": [page_data]
             },
         )
         resp.raise_for_status()

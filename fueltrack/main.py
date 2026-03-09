@@ -90,15 +90,24 @@ async def run():
             # Update Ghost page if configured
             if config.ghost and config.ghost.url and config.ghost.admin_api_key:
                 try:
-                    from .ghost.publisher import generate_html, update_ghost_page
+                    from .ghost.publisher import (
+                        generate_page_data, update_ghost_page, upload_station_data,
+                    )
 
-                    html = generate_html(stations, config.regions, config.fuel_types)
+                    page_data = generate_page_data(stations, config.regions, config.fuel_types)
+
+                    # Upload JSON data as static file to Ghost server
+                    if config.ghost.host:
+                        upload_station_data(config.ghost.host, page_data["station_json"])
+
                     await update_ghost_page(
                         ghost_url=config.ghost.url,
                         admin_api_key=config.ghost.admin_api_key,
                         page_slug=config.ghost.page_slug,
-                        html_content=html,
+                        html_content=page_data["html"],
                         page_id=config.ghost.page_id,
+                        codeinjection_head=page_data["codeinjection_head"],
+                        codeinjection_foot=page_data["codeinjection_foot"],
                     )
                 except Exception:
                     logger.exception("Failed to update Ghost page (non-fatal)")

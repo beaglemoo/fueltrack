@@ -30,7 +30,7 @@
         },
         "datasource": {
           "type": "influxdb",
-          "uid": "InfluxDB"
+          "uid": "influxdb-fueltrack"
         },
         "query": "import \"influxdata/influxdb/schema\"\n\nschema.tagValues(\n  bucket: \"fueltrack\",\n  tag: \"region\",\n  predicate: (r) => r._measurement == \"fuel_price\"\n)",
         "refresh": 2,
@@ -50,7 +50,7 @@
         },
         "datasource": {
           "type": "influxdb",
-          "uid": "InfluxDB"
+          "uid": "influxdb-fueltrack"
         },
         "query": "import \"influxdata/influxdb/schema\"\n\nschema.tagValues(\n  bucket: \"fueltrack\",\n  tag: \"fuel_type\",\n  predicate: (r) => r._measurement == \"fuel_price\"\n)",
         "refresh": 2,
@@ -70,7 +70,7 @@
         },
         "datasource": {
           "type": "influxdb",
-          "uid": "InfluxDB"
+          "uid": "influxdb-fueltrack"
         },
         "query": "import \"influxdata/influxdb/schema\"\n\nschema.tagValues(\n  bucket: \"fueltrack\",\n  tag: \"brand\",\n  predicate: (r) => r._measurement == \"fuel_price\"\n)",
         "refresh": 2,
@@ -90,16 +90,16 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Cheapest E5",
-      "description": "Lowest super unleaded price in selected region",
+      "title": "Cheapest Super Unleaded",
+      "description": "Lowest E5 super unleaded price",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 6, "w": 5, "x": 0, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "suffix:p",
           "decimals": 1,
           "thresholds": {
             "mode": "absolute",
@@ -132,9 +132,9 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"E5\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> min()\n  |> map(fn: (r) => ({r with _field: r.station_name}))"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.fuel_type == \"E5\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> min()\n  |> map(fn: (r) => ({r with _field: r.station_name}))"
         }
       ]
     },
@@ -142,15 +142,15 @@
       "id": 2,
       "type": "stat",
       "title": "Cheapest Diesel",
-      "description": "Lowest diesel price in selected region",
+      "description": "Lowest B7 diesel price",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 6, "w": 5, "x": 5, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "suffix:p",
           "decimals": 1,
           "thresholds": {
             "mode": "absolute",
@@ -183,9 +183,9 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"B7_STANDARD\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> min()\n  |> map(fn: (r) => ({r with _field: r.station_name}))"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.fuel_type == \"B7_STANDARD\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> min()\n  |> map(fn: (r) => ({r with _field: r.station_name}))"
         }
       ]
     },
@@ -196,7 +196,7 @@
       "description": "Number of stations with data",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 6, "w": 4, "x": 10, "y": 1 },
       "fieldConfig": {
@@ -232,25 +232,25 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> last()\n  |> group()\n  |> unique(column: \"station_id\")\n  |> count()\n  |> rename(columns: {_value: \"_value\"})"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> last()\n  |> group()\n  |> unique(column: \"station_id\")\n  |> count()"
         }
       ]
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Average E5 Price",
-      "description": "Average super unleaded price across selected region",
+      "title": "Average Super Unleaded",
+      "description": "Average E5 super unleaded price",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 6, "w": 5, "x": 14, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "suffix:p",
           "decimals": 1,
           "thresholds": {
             "mode": "absolute",
@@ -283,25 +283,25 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"E5\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> mean()"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.fuel_type == \"E5\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> mean()"
         }
       ]
     },
     {
       "id": 5,
       "type": "stat",
-      "title": "Average Diesel Price",
-      "description": "Average diesel price across selected region",
+      "title": "Average Diesel",
+      "description": "Average B7 diesel price",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 6, "w": 5, "x": 19, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "suffix:p",
           "decimals": 1,
           "thresholds": {
             "mode": "absolute",
@@ -334,9 +334,9 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"B7_STANDARD\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> mean()"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.fuel_type == \"B7_STANDARD\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> mean()"
         }
       ]
     },
@@ -354,7 +354,7 @@
       "title": "All Station Prices (Sorted Cheapest First)",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 8 },
       "fieldConfig": {
@@ -482,9 +482,9 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
         }
       ]
     },
@@ -502,12 +502,12 @@
       "title": "Price Over Time (per Station)",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 21 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "suffix:p",
           "decimals": 1,
           "custom": {
             "drawStyle": "line",
@@ -556,9 +556,9 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> group(columns: [\"station_name\", \"fuel_type\"])\n  |> map(fn: (r) => ({r with _field: r.station_name + \" (\" + r.fuel_type + \")\"}))"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> group(columns: [\"station_name\", \"fuel_type\"])\n  |> rename(columns: {_value: \"price\"})\n  |> map(fn: (r) => ({r with _field: r.station_name + \" - \" + r.fuel_type}))\n  |> rename(columns: {price: \"_value\"})"
         }
       ]
     },
@@ -576,12 +576,12 @@
       "title": "Average Price by Brand",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 34 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "suffix:p",
           "decimals": 1,
           "color": {
             "mode": "palette-classic"
@@ -643,9 +643,9 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group(columns: [\"brand\"])\n  |> mean()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group(columns: [\"brand\"])\n  |> mean()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
         }
       ]
     },
@@ -663,12 +663,12 @@
       "title": "Average Price by Region",
       "datasource": {
         "type": "influxdb",
-        "uid": "InfluxDB"
+        "uid": "influxdb-fueltrack"
       },
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 45 },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "suffix:p",
           "decimals": 1,
           "color": {
             "mode": "palette-classic"
@@ -730,9 +730,9 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "InfluxDB"
+            "uid": "influxdb-fueltrack"
           },
-          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group(columns: [\"region\"])\n  |> mean()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r._value >= 50.0 and r._value <= 300.0)\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group(columns: [\"region\"])\n  |> mean()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
         }
       ]
     }
