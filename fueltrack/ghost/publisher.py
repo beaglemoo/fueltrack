@@ -5,6 +5,7 @@ import json
 import logging
 import time
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 import httpx
 
@@ -59,26 +60,35 @@ _PAGE_CSS = """<style>
 .ft-more:hover{background:rgba(255,255,255,0.2)}
 .ft-prompt{text-align:center;padding:2em 1em;color:rgba(255,255,255,0.5);font-size:1.1em}
 .ft-loc{font-size:0.8em;color:rgba(255,255,255,0.5);display:block}
+.ft-brands{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+.ft-brands button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.8em;white-space:nowrap}
+.ft-brands button.active{background:rgba(255,255,255,0.3);color:#fff;border-color:rgba(255,255,255,0.3)}
+.ft-stats{font-size:0.8em;color:rgba(255,255,255,0.5);margin-top:6px}
+.ft-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.ft-dot-fresh{background:#4caf50}
+.ft-dot-mid{background:#ff9800}
+.ft-dot-stale{background:#666}
+.ft-age{font-size:0.75em;color:rgba(255,255,255,0.4);margin-left:4px}
+.ft-map{color:inherit;text-decoration:none;border-bottom:1px dotted rgba(255,255,255,0.3)}
+.ft-map:hover{border-bottom-color:rgba(255,255,255,0.6)}
 @media(max-width:600px){
 .ft-results .hide-mobile{display:none}
 .ft-results td,.ft-results th{padding:4px 3px;font-size:0.8em}
+.ft-search{font-size:16px}
+.ft-sort button,.ft-brands button{min-height:44px;padding:8px 12px}
+.ft-brands{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
 }
-</style>
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Dataset","name":"UK Fuel Prices","description":"Current fuel prices at over 6,300 UK petrol stations, updated every 4 hours","url":"https://sillymoo.dev/uk-fuel-prices/","license":"https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/","creator":{"@type":"Person","name":"James"},"temporalCoverage":"..","isBasedOn":{"@type":"GovernmentService","name":"GOV.UK Fuel Finder","url":"https://www.fuel-finder.service.gov.uk/"}}
-</script>"""
+</style>"""
 
 _PAGE_JS = """<script>
 (function(){
 var hook=document.getElementById('search-all-stations');
 if(!hook)return;
 
-// Create container div after the heading
 var app=document.createElement('div');
 app.id='ft-app';
 hook.parentNode.insertBefore(app,hook.nextSibling);
 
-// Load station data from static JSON file
 app.innerHTML='<div class="ft-prompt">Loading station data...</div>';
 fetch('/content/files/stations.json')
 .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
@@ -97,7 +107,10 @@ hook.innerHTML='<div class="ft-search-wrap">'
 +'<button data-col="d">Diesel</button>'
 +'<button data-col="s">Super</button>'
 +'<button data-col="n">Name</button>'
-+'</div></div></div>'
++'</div></div>'
++'<div class="ft-brands" id="ft-brands"></div>'
++'<div class="ft-stats" id="ft-stats"></div>'
++'</div>'
 +'<div class="ft-results">'
 +'<div id="ft-prompt" class="ft-prompt">Type a location, station name, or brand to search all UK fuel prices</div>'
 +'<table><thead><tr>'
@@ -113,14 +126,61 @@ var tbody=document.getElementById('ft-body');
 var countEl=document.getElementById('ft-count');
 var moreBtn=document.getElementById('ft-more');
 var promptEl=document.getElementById('ft-prompt');
+var statsEl=document.getElementById('ft-stats');
 var sortBtns=hook.querySelectorAll('.ft-sort button');
 var filtered=[];
 var limit=100;
 var sortCol='e';
 var sortAsc=true;
+var brandFilter='';
 var timer=null;
 
+// Build brand filter buttons
+var brands=['Shell','BP','Esso','Tesco','Sainsburys','ASDA','Morrisons','Costco','Jet','MFG'];
+var brandsEl=document.getElementById('ft-brands');
+var allBtn=document.createElement('button');
+allBtn.textContent='All';allBtn.className='active';allBtn.setAttribute('data-brand','');
+brandsEl.appendChild(allBtn);
+brands.forEach(function(b){
+  var btn=document.createElement('button');btn.textContent=b;btn.setAttribute('data-brand',b);
+  brandsEl.appendChild(btn);
+});
+brandsEl.addEventListener('click',function(ev){
+  if(ev.target.tagName!=='BUTTON')return;
+  brandFilter=ev.target.getAttribute('data-brand');
+  brandsEl.querySelectorAll('button').forEach(function(b){b.classList.remove('active');});
+  ev.target.classList.add('active');
+  filter();
+});
+
 function fmt(v){if(v==null)return'-';return v<10?v+'p':v.toFixed(1)+'p';}
+
+function age(epoch){
+  if(!epoch)return'';
+  var s=Math.floor(Date.now()/1000-epoch);
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+function dotClass(epoch){
+  if(!epoch)return'ft-dot ft-dot-stale';
+  var h=(Date.now()/1000-epoch)/3600;
+  if(h<24)return'ft-dot ft-dot-fresh';
+  if(h<72)return'ft-dot ft-dot-mid';
+  return'ft-dot ft-dot-stale';
+}
+
+function updateStats(){
+  if(!filtered.length){statsEl.textContent='';return;}
+  var key=sortCol==='n'?'e':sortCol;
+  var vals=filtered.map(function(s){return s[key];}).filter(function(v){return v!=null;});
+  if(!vals.length){statsEl.textContent='';return;}
+  var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+  var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length;
+  var label={e:'Unleaded',d:'Diesel',s:'Super',p:'Premium'}[key]||'Price';
+  statsEl.textContent=label+': Avg '+avg.toFixed(1)+'p | Cheapest '+mn.toFixed(1)+'p | Range '+mn.toFixed(1)+'p - '+mx.toFixed(1)+'p';
+}
 
 function render(){
   var frag=document.createDocumentFragment();
@@ -131,8 +191,13 @@ function render(){
     var tr=document.createElement('tr');
     var c=function(t,cls){var td=document.createElement('td');td.textContent=t;if(cls)td.className=cls;return td;};
     var nameCell=document.createElement('td');
-    nameCell.appendChild(document.createTextNode(s.n));
+    var a=document.createElement('a');
+    a.href='https://www.google.com/maps/search/'+encodeURIComponent(s.n);
+    a.target='_blank';a.rel='noopener';a.className='ft-map';a.textContent=s.n;
+    nameCell.appendChild(a);
     if(s.l&&s.l!==s.n){var loc=document.createElement('span');loc.className='ft-loc';loc.textContent=s.l;nameCell.appendChild(loc);}
+    if(s.u){var dot=document.createElement('span');dot.className=dotClass(s.u);dot.title='Updated '+age(s.u);nameCell.appendChild(dot);
+    var ageSpan=document.createElement('span');ageSpan.className='ft-age';ageSpan.textContent=age(s.u);nameCell.appendChild(ageSpan);}
     tr.appendChild(nameCell);
     tr.appendChild(c(s.b,''));
     tr.appendChild(c(fmt(s.e),'price'+(s._ce?' cheap':'')));
@@ -146,6 +211,7 @@ function render(){
   moreBtn.style.display=filtered.length>limit?'block':'none';
   if(filtered.length>limit)moreBtn.textContent='Show more ('+Math.min(100,filtered.length-limit)+' of '+(filtered.length-limit)+' remaining)';
   promptEl.style.display=(filtered.length===0&&input.value.length===0)?'block':'none';
+  updateStats();
 }
 
 function doSort(){
@@ -175,10 +241,11 @@ function markCheapest(){
 function filter(){
   var q=input.value.toLowerCase().trim();
   limit=100;
-  if(q===''){filtered=S.slice();}
+  var base=brandFilter?S.filter(function(s){return s.b===brandFilter;}):S;
+  if(q===''){filtered=base.slice();}
   else{
     var terms=q.split(/\\s+/);
-    filtered=S.filter(function(s){
+    filtered=base.filter(function(s){
       var hay=(s.n+'|'+s.b+'|'+(s.l||'')).toLowerCase();
       return terms.every(function(t){return hay.indexOf(t)>=0;});
     });
@@ -231,12 +298,19 @@ def generate_page_data(
         if not valid_prices:
             continue
 
+        # Get most recent price update timestamp
+        max_updated = max(
+            (fp.price_last_updated for fp in s.fuel_prices if fp.price),
+            default=None,
+        )
+
         station_rows.append({
             "name": s.trading_name,
             "brand": brand,
             "location": location,
             "region": region,
             "prices": valid_prices,
+            "updated": max_updated,
         })
 
     # Sort by cheapest E10, then B7_STANDARD
@@ -248,7 +322,7 @@ def generate_page_data(
     # Build compact JSON data for client-side search
     json_data = []
     for row in station_rows:
-        json_data.append({
+        entry = {
             "n": row["name"],
             "b": row["brand"],
             "l": row["location"],
@@ -256,7 +330,10 @@ def generate_page_data(
             "s": row["prices"].get("E5"),
             "d": row["prices"].get("B7_STANDARD"),
             "p": row["prices"].get("B7_PREMIUM"),
-        })
+        }
+        if row["updated"]:
+            entry["u"] = int(row["updated"].timestamp())
+        json_data.append(entry)
 
     # Build HTML (only Ghost-safe elements - no script/style/input/button)
     parts = []
@@ -269,7 +346,10 @@ def generate_page_data(
                  'This page refreshes every 4 hours.</p>')
 
     # Use a heading as anchor - Ghost preserves h2 with auto-generated IDs
-    parts.append('<h2 id="search">Search All Stations</h2>')
+    parts.append('<h2>Search All Stations</h2>')
+    parts.append(f'<p>Search and compare current fuel prices across {len(station_rows):,} '
+                 'UK petrol stations. Filter by brand, sort by price, and find the '
+                 'cheapest fuel near you.</p>')
 
     # National top 10 cheapest per fuel type
     top_n = 10
@@ -290,7 +370,9 @@ def generate_page_data(
         parts.append('<thead><tr><th>#</th><th>Station</th><th>Brand</th><th>Price</th></tr></thead>')
         parts.append('<tbody>')
         for i, (s, price) in enumerate(ft_sorted[:top_n], 1):
-            parts.append(f'<tr><td>{i}</td><td>{_esc(s["name"])}</td><td>{_esc(s["brand"])}</td><td>{price:.1f}p</td></tr>')
+            maps_url = f'https://www.google.com/maps/search/{quote(s["name"])}'
+            name_link = f'<a href="{maps_url}" target="_blank" rel="noopener">{_esc(s["name"])}</a>'
+            parts.append(f'<tr><td>{i}</td><td>{name_link}</td><td>{_esc(s["brand"])}</td><td>{price:.1f}p</td></tr>')
         parts.append('</tbody></table>')
 
     # Footer
@@ -299,9 +381,92 @@ def generate_page_data(
                  '| Data: GOV.UK Fuel Finder (Open Government Licence v3.0) '
                  '| Updates every 4 hours</small></p>')
 
+    # Build dynamic structured data for SEO
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    dataset_schema = {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "UK Fuel Prices",
+        "description": f"Current fuel prices at over {len(station_rows):,} UK petrol stations, updated every 4 hours",
+        "url": "https://sillymoo.dev/uk-fuel-prices/",
+        "license": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+        "creator": {"@type": "Person", "name": "James"},
+        "dateModified": now_iso,
+        "temporalCoverage": "..",
+        "keywords": ["UK fuel prices", "petrol prices", "diesel prices", "cheapest petrol", "fuel price comparison"],
+        "spatialCoverage": {
+            "@type": "Place",
+            "name": "United Kingdom",
+            "geo": {"@type": "GeoShape", "box": "49.9 -8.6 60.9 1.8"},
+        },
+        "distribution": {
+            "@type": "DataDownload",
+            "encodingFormat": "application/json",
+            "contentUrl": "https://sillymoo.dev/content/files/stations.json",
+        },
+        "variableMeasured": [
+            {"@type": "PropertyValue", "name": "Unleaded (E10)", "unitText": "pence per litre"},
+            {"@type": "PropertyValue", "name": "Diesel (B7)", "unitText": "pence per litre"},
+            {"@type": "PropertyValue", "name": "Super Unleaded (E5)", "unitText": "pence per litre"},
+            {"@type": "PropertyValue", "name": "Premium Diesel (B7 Premium)", "unitText": "pence per litre"},
+        ],
+        "isBasedOn": {
+            "@type": "GovernmentService",
+            "name": "GOV.UK Fuel Finder",
+            "url": "https://www.fuel-finder.service.gov.uk/",
+        },
+    }
+
+    # Dynamic FAQ answers
+    cheapest_e10 = min((r for r in station_rows if "E10" in r["prices"]),
+                       key=lambda r: r["prices"]["E10"], default=None)
+    cheapest_e10_answer = (
+        f"The cheapest unleaded petrol in the UK right now is {cheapest_e10['prices']['E10']:.1f}p "
+        f"per litre at {cheapest_e10['name']}."
+        if cheapest_e10 else "Check the table above for current prices."
+    )
+
+    faq_schema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "How often are UK fuel prices updated?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Prices are updated every 4 hours using data from the GOV.UK Fuel Finder. Stations report price changes within 30 minutes of changes at the pump.",
+                },
+            },
+            {
+                "@type": "Question",
+                "name": "What is the cheapest petrol in the UK right now?",
+                "acceptedAnswer": {"@type": "Answer", "text": cheapest_e10_answer},
+            },
+            {
+                "@type": "Question",
+                "name": "How many petrol stations are tracked?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": f"This page tracks fuel prices at {len(station_rows):,} petrol stations across the UK, covering all major brands and independent retailers.",
+                },
+            },
+        ],
+    }
+
+    schema_tags = (
+        '<script type="application/ld+json">'
+        + json.dumps(dataset_schema, separators=(",", ":"))
+        + "</script>\n"
+        + '<script type="application/ld+json">'
+        + json.dumps(faq_schema, separators=(",", ":"))
+        + "</script>"
+    )
+
     return {
         "html": "\n".join(parts),
-        "codeinjection_head": _PAGE_CSS,
+        "codeinjection_head": _PAGE_CSS + "\n" + schema_tags,
         "codeinjection_foot": _PAGE_JS,
         "station_json": json.dumps(json_data, separators=(",", ":")),
     }
