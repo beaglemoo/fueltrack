@@ -1,0 +1,14 @@
+[Unit]
+Description=FuelTrack - UK fuel price collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/fueltrack
+Environment=FUELTRACK_CONFIG=/root/fueltrack/config.yaml
+ExecStart=/root/fueltrack/venv/bin/python -m fueltrack.main
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

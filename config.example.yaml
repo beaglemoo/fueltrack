@@ -1,0 +1,42 @@
+fuelfinder:
+  client_id: "YOUR_CLIENT_ID"
+  client_secret: "YOUR_CLIENT_SECRET"
+  base_url: "https://www.fuel-finder.service.gov.uk"
+
+# Regions to track - add your own postcodes and search keywords
+# The collector fetches ALL UK stations and filters by matching
+# station names against the keywords list for each region
+regions:
+  - name: "milton-keynes"
+    label: "Milton Keynes"
+    keywords:
+      - "MILTON KEYNES"
+      - "BLETCHLEY"
+      - "NEWPORT PAGNELL"
+      - "WOLVERTON"
+      - "STONY STRATFORD"
+  - name: "leamington-southam"
+    label: "Leamington Spa / Southam"
+    keywords:
+      - "LEAMINGTON"
+      - "SOUTHAM"
+      - "WARWICK"
+      - "KENILWORTH"
+
+# Fuel types to track
+# Available: E5 (super unleaded), E10 (unleaded), B7_STANDARD (diesel), B7_PREMIUM (premium diesel)
+fuel_types:
+  - "E5"
+  - "B7_STANDARD"
+
+influxdb:
+  url: "http://localhost:8086"
+  token: "YOUR_INFLUXDB_TOKEN"
+  org: "your-org"
+  bucket: "fueltrack"
+
+# Optional: Ghost blog integration for public fuel price page
+# ghost:
+#   url: "http://localhost:2368"
+#   admin_api_key: "YOUR_GHOST_ADMIN_API_KEY"
+#   page_slug: "fuel-prices"
