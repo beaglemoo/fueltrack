@@ -1,0 +1,756 @@
+{
+  "uid": "fueltrack",
+  "title": "FuelTrack - UK Fuel Prices",
+  "tags": ["fueltrack", "fuel", "prices"],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "1h",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "region",
+        "type": "query",
+        "label": "Region",
+        "multi": true,
+        "includeAll": true,
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "influxdb",
+          "uid": "InfluxDB"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\n\nschema.tagValues(\n  bucket: \"fueltrack\",\n  tag: \"region\",\n  predicate: (r) => r._measurement == \"fuel_price\"\n)",
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "fuel_type",
+        "type": "query",
+        "label": "Fuel Type",
+        "multi": true,
+        "includeAll": true,
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "influxdb",
+          "uid": "InfluxDB"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\n\nschema.tagValues(\n  bucket: \"fueltrack\",\n  tag: \"fuel_type\",\n  predicate: (r) => r._measurement == \"fuel_price\"\n)",
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "brand",
+        "type": "query",
+        "label": "Brand",
+        "multi": true,
+        "includeAll": true,
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "influxdb",
+          "uid": "InfluxDB"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\n\nschema.tagValues(\n  bucket: \"fueltrack\",\n  tag: \"brand\",\n  predicate: (r) => r._measurement == \"fuel_price\"\n)",
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Overview Stats",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Cheapest E5",
+      "description": "Lowest super unleaded price in selected region",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 6, "w": 5, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 145 },
+              { "color": "red", "value": 155 }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"E5\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> min()\n  |> map(fn: (r) => ({r with _field: r.station_name}))"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Cheapest Diesel",
+      "description": "Lowest diesel price in selected region",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 6, "w": 5, "x": 5, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 145 },
+              { "color": "red", "value": 155 }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"B7_STANDARD\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> min()\n  |> map(fn: (r) => ({r with _field: r.station_name}))"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Stations",
+      "description": "Number of stations with data",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 6, "w": 4, "x": 10, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> last()\n  |> group()\n  |> unique(column: \"station_id\")\n  |> count()\n  |> rename(columns: {_value: \"_value\"})"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Average E5 Price",
+      "description": "Average super unleaded price across selected region",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 6, "w": 5, "x": 14, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 145 },
+              { "color": "red", "value": 155 }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"E5\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> mean()"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Average Diesel Price",
+      "description": "Average diesel price across selected region",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 6, "w": 5, "x": 19, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 145 },
+              { "color": "red", "value": 155 }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"B7_STANDARD\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> mean()"
+        }
+      ]
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Price Table",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "All Station Prices (Sorted Cheapest First)",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Station Name" },
+            "properties": [
+              { "id": "custom.width", "value": 300 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Brand" },
+            "properties": [
+              { "id": "custom.width", "value": 120 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Region" },
+            "properties": [
+              { "id": "custom.width", "value": 180 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Fuel Type" },
+            "properties": [
+              { "id": "custom.width", "value": 120 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Price (p/litre)" },
+            "properties": [
+              { "id": "decimals", "value": 1 },
+              { "id": "custom.width", "value": 130 },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 145 },
+                    { "color": "red", "value": 155 }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Last Updated" },
+            "properties": [
+              { "id": "unit", "value": "dateTimeAsIso" },
+              { "id": "custom.width", "value": 200 }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Price (p/litre)",
+            "desc": false
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_start": true,
+              "_stop": true,
+              "_measurement": true,
+              "_field": true,
+              "station_id": true,
+              "result": true,
+              "table": true
+            },
+            "renameByName": {
+              "station_name": "Station Name",
+              "brand": "Brand",
+              "region": "Region",
+              "fuel_type": "Fuel Type",
+              "_value": "Price (p/litre)",
+              "_time": "Last Updated"
+            },
+            "indexByName": {
+              "station_name": 0,
+              "brand": 1,
+              "region": 2,
+              "fuel_type": 3,
+              "_value": 4,
+              "_time": 5
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
+        }
+      ]
+    },
+    {
+      "id": 300,
+      "type": "row",
+      "title": "Price Trends",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Price Over Time (per Station)",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 21 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "spanNulls": true,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "Price (p/litre)",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "asc"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "min", "max"],
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> group(columns: [\"station_name\", \"fuel_type\"])\n  |> map(fn: (r) => ({r with _field: r.station_name + \" (\" + r.fuel_type + \")\"}))"
+        }
+      ]
+    },
+    {
+      "id": 400,
+      "type": "row",
+      "title": "Brand Comparison",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "barchart",
+      "title": "Average Price by Brand",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 34 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisLabel": "Average Price (p/litre)",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "showValue": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "xTickLabelRotation": -45,
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "stacking": "none",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_start": true,
+              "_stop": true,
+              "_measurement": true,
+              "_field": true,
+              "result": true,
+              "table": true
+            },
+            "renameByName": {
+              "brand": "Brand",
+              "_value": "Avg Price (p/litre)"
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.region == \"${region}\" or \"${region}\" == \"All\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group(columns: [\"brand\"])\n  |> mean()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
+        }
+      ]
+    },
+    {
+      "id": 500,
+      "type": "row",
+      "title": "Region Comparison",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "barchart",
+      "title": "Average Price by Region",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "InfluxDB"
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 45 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisLabel": "Average Price (p/litre)",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "showValue": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "xTickLabelRotation": -45,
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "stacking": "none",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_start": true,
+              "_stop": true,
+              "_measurement": true,
+              "_field": true,
+              "result": true,
+              "table": true
+            },
+            "renameByName": {
+              "region": "Region",
+              "_value": "Avg Price (p/litre)"
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "InfluxDB"
+          },
+          "query": "from(bucket: \"fueltrack\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fuel_price\")\n  |> filter(fn: (r) => r._field == \"price_pence\")\n  |> filter(fn: (r) => r.fuel_type == \"${fuel_type}\" or \"${fuel_type}\" == \"All\")\n  |> filter(fn: (r) => r.brand == \"${brand}\" or \"${brand}\" == \"All\")\n  |> last()\n  |> group(columns: [\"region\"])\n  |> mean()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: false)"
+        }
+      ]
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  }
+}

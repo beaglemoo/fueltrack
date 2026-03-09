@@ -87,6 +87,21 @@ async def run():
             writer.write_points(points)
             logger.info("Collection complete: %d price points", len(points))
 
+            # Update Ghost page if configured
+            if config.ghost and config.ghost.url and config.ghost.admin_api_key:
+                try:
+                    from .ghost.publisher import generate_html, update_ghost_page
+
+                    html = generate_html(stations, config.regions, config.fuel_types)
+                    await update_ghost_page(
+                        ghost_url=config.ghost.url,
+                        admin_api_key=config.ghost.admin_api_key,
+                        page_slug=config.ghost.page_slug,
+                        html_content=html,
+                    )
+                except Exception:
+                    logger.exception("Failed to update Ghost page (non-fatal)")
+
     finally:
         writer.close()
 
