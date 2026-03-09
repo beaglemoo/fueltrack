@@ -271,27 +271,27 @@ def generate_page_data(
     # Use a heading as anchor - Ghost preserves h2 with auto-generated IDs
     parts.append('<h2 id="search">Search All Stations</h2>')
 
-    # National top 20 cheapest
-    parts.append('<hr>')
-    parts.append('<h2>UK Top 20 Cheapest - Unleaded (E10)</h2>')
-    parts.append('<table>')
-    parts.append('<thead><tr><th>#</th><th>Station</th><th>Brand</th><th>Price</th></tr></thead>')
-    parts.append('<tbody>')
-    e10_sorted = [(s, s["prices"]["E10"]) for s in station_rows if "E10" in s["prices"]]
-    e10_sorted.sort(key=lambda x: x[1])
-    for i, (s, price) in enumerate(e10_sorted[:20], 1):
-        parts.append(f'<tr><td>{i}</td><td>{_esc(s["name"])}</td><td>{_esc(s["brand"])}</td><td>{price:.1f}p</td></tr>')
-    parts.append('</tbody></table>')
-
-    parts.append('<h2>UK Top 20 Cheapest - Diesel (B7)</h2>')
-    parts.append('<table>')
-    parts.append('<thead><tr><th>#</th><th>Station</th><th>Brand</th><th>Price</th></tr></thead>')
-    parts.append('<tbody>')
-    b7_sorted = [(s, s["prices"]["B7_STANDARD"]) for s in station_rows if "B7_STANDARD" in s["prices"]]
-    b7_sorted.sort(key=lambda x: x[1])
-    for i, (s, price) in enumerate(b7_sorted[:20], 1):
-        parts.append(f'<tr><td>{i}</td><td>{_esc(s["name"])}</td><td>{_esc(s["brand"])}</td><td>{price:.1f}p</td></tr>')
-    parts.append('</tbody></table>')
+    # National top 10 cheapest per fuel type
+    top_n = 10
+    fuel_type_labels = [
+        ("E10", "Unleaded (E10)"),
+        ("B7_STANDARD", "Diesel"),
+        ("E5", "Super Unleaded (E5)"),
+        ("B7_PREMIUM", "Premium Diesel"),
+    ]
+    for ft_code, ft_label in fuel_type_labels:
+        ft_sorted = [(s, s["prices"][ft_code]) for s in station_rows if ft_code in s["prices"]]
+        if not ft_sorted:
+            continue
+        ft_sorted.sort(key=lambda x: x[1])
+        parts.append('<hr>')
+        parts.append(f'<h2>UK Top {top_n} Cheapest - {ft_label}</h2>')
+        parts.append('<table>')
+        parts.append('<thead><tr><th>#</th><th>Station</th><th>Brand</th><th>Price</th></tr></thead>')
+        parts.append('<tbody>')
+        for i, (s, price) in enumerate(ft_sorted[:top_n], 1):
+            parts.append(f'<tr><td>{i}</td><td>{_esc(s["name"])}</td><td>{_esc(s["brand"])}</td><td>{price:.1f}p</td></tr>')
+        parts.append('</tbody></table>')
 
     # Footer
     parts.append('<hr>')
