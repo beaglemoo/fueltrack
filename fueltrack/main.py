@@ -98,6 +98,7 @@ async def run():
                         admin_api_key=config.ghost.admin_api_key,
                         page_slug=config.ghost.page_slug,
                         html_content=html,
+                        page_id=config.ghost.page_id,
                     )
                 except Exception:
                     logger.exception("Failed to update Ghost page (non-fatal)")
