@@ -63,7 +63,10 @@ _PAGE_CSS = """<style>
 .ft-results .hide-mobile{display:none}
 .ft-results td,.ft-results th{padding:4px 3px;font-size:0.8em}
 }
-</style>"""
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Dataset","name":"UK Fuel Prices","description":"Current fuel prices at over 6,300 UK petrol stations, updated every 4 hours","url":"https://sillymoo.dev/uk-fuel-prices/","license":"https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/","creator":{"@type":"Person","name":"James"},"temporalCoverage":"..","isBasedOn":{"@type":"GovernmentService","name":"GOV.UK Fuel Finder","url":"https://www.fuel-finder.service.gov.uk/"}}
+</script>"""
 
 _PAGE_JS = """<script>
 (function(){
