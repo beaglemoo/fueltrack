@@ -37,11 +37,22 @@ class FuelFinderClient:
         headers = {"Authorization": f"Bearer {token}"}
 
         for attempt in range(MAX_RETRIES):
-            resp = await self._client.get(
-                f"{self._base_url}{path}",
-                headers=headers,
-                params=params,
-            )
+            try:
+                resp = await self._client.get(
+                    f"{self._base_url}{path}",
+                    headers=headers,
+                    params=params,
+                )
+            except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.PoolTimeout):
+                delay = RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)]
+                if attempt + 1 == MAX_RETRIES:
+                    raise
+                logger.warning(
+                    "Request timeout for %s (attempt %d/%d), retrying in %ds",
+                    path, attempt + 1, MAX_RETRIES, delay,
+                )
+                await asyncio.sleep(delay)
+                continue
             if resp.status_code == 429:
                 delay = RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)]
                 logger.warning("Rate limited, waiting %ds", delay)

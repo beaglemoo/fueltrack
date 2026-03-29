@@ -30,7 +30,9 @@ class InfluxDBConfig(BaseModel):
 class GhostConfig(BaseModel):
     url: str = ""
     admin_api_key: str = ""
-    page_slug: str = "fuel-prices"
+    page_slug: str = "uk-fuel-prices"
+    page_id: str = ""
+    host: str = ""
 
 
 class Settings(BaseModel):
