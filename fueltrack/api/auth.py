@@ -1,11 +1,15 @@
 """OAuth token management for Fuel Finder API."""
 
+import asyncio
 import time
 import logging
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
+RETRY_DELAYS = [5, 15, 30]
 
 
 class TokenManager:
@@ -23,14 +27,28 @@ class TokenManager:
             return self._token
 
         url = f"{self._base_url}/api/v1/oauth/generate_access_token"
-        resp = await client.post(
-            url,
-            json={
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-            },
-        )
-        resp.raise_for_status()
+
+        for attempt in range(MAX_RETRIES):
+            try:
+                resp = await client.post(
+                    url,
+                    json={
+                        "client_id": self._client_id,
+                        "client_secret": self._client_secret,
+                    },
+                )
+                resp.raise_for_status()
+                break
+            except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.PoolTimeout):
+                delay = RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)]
+                if attempt + 1 == MAX_RETRIES:
+                    raise
+                logger.warning(
+                    "Token request timeout (attempt %d/%d), retrying in %ds",
+                    attempt + 1, MAX_RETRIES, delay,
+                )
+                await asyncio.sleep(delay)
+
         data = resp.json()
 
         if not data.get("success"):
